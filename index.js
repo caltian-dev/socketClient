@@ -1,6 +1,8 @@
 import fs from "fs";
 import JavaScriptObfuscator from "javascript-obfuscator";
 
+// "\n" in socket_client.js => "\\n" in here
+
 const code = `
   const WebSocket = require("ws");
   const { exec } = require("child_process");
